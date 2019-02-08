@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include <string>
 #include <iomanip>
 #include <vector>
@@ -27,21 +29,58 @@ public:
     {
 
     }
-    void Add( cElement* sentence )
+    void Add( cElement* e )
     {
-        switch( sentence->myType )
+        // check that it is possible to add new element type to this element type
+        try
         {
-        case eType::sentence:
-            if( myType != eType::paragraph )
-                throw std::runtime_error("Attempt to add sentence to non paragraph");
-            break;
+            switch( e->myType )
+            {
+            case eType::sentence:
+                if( myType != eType::paragraph )
+                    throw 1;
+                break;
+            case eType::paragraph:
+                if( myType != eType::block )
+                    throw 1;
+                break;
+            case eType::title:
+                if( myType != eType::block )
+                    throw 1;
+                break;
+            case eType::block:
+                throw 1;
+                break;
+            }
+        }
+        catch( int x )
+        {
+            std::stringstream ss;
+            ss << "Invalid addition of " << e->TypeText() << " to " << TypeText();
+            throw std::runtime_error( ss.str());
         }
 
-        myElement.push_back( sentence );
+        // add new element to this element
+        myElement.push_back( e );
+
     }
-    virtual void Dump()
+    // remove all child elements
+    void clear()
     {
+        myElement.clear();
     }
+    virtual void Dump() = 0;
+    virtual bool IsTitle()
+    {
+        return false;
+    }
+
+    std::string TypeText()
+    {
+        std::string vt[] { "sentence", "paragraph", "title", "block" };
+        return vt[(int)myType];
+    }
+
 };
 class cSentence : public cElement
 {
@@ -53,7 +92,7 @@ public:
     }
     virtual void Dump()
     {
-        std::cout << "\n" << std::left <<std::setw(20) << "SENTENCE: " << myText << "\n";
+        std::cout << "\n" << std::left <<std::setw(20) << "SENTENCE: " << myText;
     }
 };
 class cTitle : public cElement
@@ -77,12 +116,30 @@ public:
     {
 
     }
+    /** True if paragraph is formatted as a title
+
+    A paragraph is a title if it has one sentence with all uppercase letters
+    */
+    bool IsTitle()
+    {
+        if( myElement.size() != 1 )
+            return false;
+        for( auto c : myElement[0]->myText ) {
+            if( islower( c ) )
+                return false;
+        }
+        return true;
+    }
     void Dump()
     {
+        // Do not display empty paragraphs
+        if( ! myElement.size() )
+            return;
+
         std::cout << "\nPARAGAPH:";
         for( auto e : myElement )
             e->Dump();
-        std::cout << "END_PARAGRAPH\n";
+        std::cout << "\nEND_PARAGRAPH ";
     }
 };
 
@@ -96,6 +153,8 @@ public:
     }
     void Add( const cSentence& sentence )
     {
+        if( ! myElement.size() )
+            throw std::runtime_error("No paragraph for sentence");
         myElement.back()->Add( new cSentence( sentence ) );
     }
     void Add( const cTitle& title )
@@ -160,7 +219,50 @@ int cText::myLastIndex = 0;
 class cSwapTextFile
 {
 public:
-    std::vector< cText > myText;
+
+    void Read( const std::string& filename )
+    {
+        std::ifstream in( filename.c_str() );
+        if( ! in.is_open() )
+            throw std::runtime_error("Cannot open input file");
+        std::stringstream sstr;
+        sstr << in.rdbuf();
+        myRawText = sstr.str();
+    }
+
+    void Parse()
+    {
+        Add( cText() );
+        Add( cSection() );
+        Add( cParagraph() );
+        int p_now = 0;
+        int p_sentence = 0;
+        int p_para = 0;
+        while( 1 )
+        {
+            p_sentence = myRawText.find(".",p_now);
+            p_para = myRawText.find("\n",p_now);
+            if( p_sentence != -1 )
+            {
+                Add( cSentence( myRawText.substr(p_now,p_sentence-p_now+1)));
+                p_now = p_sentence+2;
+                if( p_now > p_para ) {
+
+                    // reached the end of a para
+
+                    CheckForTitle();
+
+                    // start next para
+                    Add( cParagraph() );
+                }
+            }
+            else
+            {
+                return;
+            }
+        }
+
+    }
     void Add( const cText& text )
     {
         myText.push_back( text );
@@ -195,39 +297,66 @@ public:
             t.Swap();
         }
     }
+
+
+private:
+    std::vector< cText > myText;
+    std::string myRawText;
+
+    /** Check if last paragraph is actually a title */
+    void CheckForTitle()
+    {
+        // get last element
+        cElement * lp = myText.back().mySection.back().myElement.back();
+
+        // check for paragraph that is really a title
+        if( ! lp->IsTitle() )
+            return;
+
+        // add the title
+        Add( cTitle( lp->myElement[0]->myText ) );
+
+        // null the paragraph that was a title
+        lp->clear();
+
+    }
 };
 
 int main()
 {
     cSwapTextFile input;
 
-    input.Add( cText() );
-    input.Add( cSection() );
-    input.Add( cTitle( "Title I") );
-    input.Add( cParagraph() );
-    input.Add( cSentence("This is first sentence in text 1.") );
-    input.Add( cTitle( "Title II") );
-    input.Add( cParagraph() );
-    input.Add( cSentence("This is 2nd sentence in text 1.") );
-
-    input.Add( cText() );
-    input.Add( cSection() );
-    input.Add( cTitle( "Title I") );
-    input.Add( cParagraph() );
-    input.Add( cSentence("This is 1st sentence in text 2.") );
-    input.Add( cSection() );
-    input.Add( cTitle( "Title II") );
-    input.Add( cParagraph() );
-    input.Add( cSentence("This is 2nd sentence in text 2.") );
-
-    std::cout << "The input was:\n";
+    input.Read("test.txt");
+    input.Parse();
     input.Dump();
 
-    input.Swap();
-
-    std::cout << "+++++++++++++++\n";
-    std::cout << "The output is:\n";
-    input.Dump();
+//    input.Add( cText() );
+//    input.Add( cSection() );
+//    input.Add( cTitle( "Title I") );
+//    input.Add( cParagraph() );
+//    input.Add( cSentence("This is first sentence in text 1.") );
+//    input.Add( cTitle( "Title II") );
+//    input.Add( cParagraph() );
+//    input.Add( cSentence("This is 2nd sentence in text 1.") );
+//
+//    input.Add( cText() );
+//    input.Add( cSection() );
+//    input.Add( cTitle( "Title I") );
+//    input.Add( cParagraph() );
+//    input.Add( cSentence("This is 1st sentence in text 2.") );
+//    input.Add( cSection() );
+//    input.Add( cTitle( "Title II") );
+//    input.Add( cParagraph() );
+//    input.Add( cSentence("This is 2nd sentence in text 2.") );
+//
+//    std::cout << "The input was:\n";
+//    input.Dump();
+//
+//    input.Swap();
+//
+//    std::cout << "+++++++++++++++\n";
+//    std::cout << "The output is:\n";
+//    input.Dump();
 
     return 0;
 }
