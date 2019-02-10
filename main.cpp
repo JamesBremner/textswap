@@ -8,320 +8,117 @@
 #include <random>       // std::default_random_engine
 #include <chrono>       // std::chrono::system_clock
 
+#include "cSwapTextFile.h"
+
 using namespace std;
 
-class cElement
-{
-public:
-    enum class eType
-    {
-        sentence,
-        paragraph,
-        title,
-        block
-    } myType;
-    std::vector< cElement* > myElement;
-    std::string myText;
-
-    cElement( eType type, const std::string& text )
-        : myType( type )
-        , myText( text )
-    {
-
-    }
-    void Add( cElement* e )
-    {
-        // check that it is possible to add new element type to this element type
-        try
-        {
-            switch( e->myType )
-            {
-            case eType::sentence:
-                if( myType != eType::paragraph )
-                    throw 1;
-                break;
-            case eType::paragraph:
-                if( myType != eType::block )
-                    throw 1;
-                break;
-            case eType::title:
-                if( myType != eType::block )
-                    throw 1;
-                break;
-            case eType::block:
-                throw 1;
-                break;
-            }
-        }
-        catch( int x )
-        {
-            std::stringstream ss;
-            ss << "Invalid addition of " << e->TypeText() << " to " << TypeText();
-            throw std::runtime_error( ss.str());
-        }
-
-        // add new element to this element
-        myElement.push_back( e );
-
-    }
-    // remove all child elements
-    void clear()
-    {
-        myElement.clear();
-    }
-    virtual void Dump() = 0;
-    virtual bool IsTitle()
-    {
-        return false;
-    }
-
-    std::string TypeText()
-    {
-        std::string vt[] { "sentence", "paragraph", "title", "block" };
-        return vt[(int)myType];
-    }
-
-};
-class cSentence : public cElement
-{
-public:
-    cSentence( const std::string text )
-        : cElement( cElement::eType::sentence, text )
-    {
-
-    }
-    virtual void Dump()
-    {
-        std::cout << "\n" << std::left <<std::setw(20) << "SENTENCE: " << myText;
-    }
-};
-class cTitle : public cElement
-{
-public:
-    cTitle( const std::string text )
-        : cElement( cElement::eType::sentence, text )
-    {
-
-    }
-    virtual void Dump()
-    {
-        std::cout <<"\n"<< std::left <<std::setw(20) << "TITLE: " << myText;
-    }
-};
-class cParagraph : public cElement
-{
-public:
-    cParagraph()
-        : cElement( cElement::eType::paragraph, "" )
-    {
-
-    }
-    /** True if paragraph is formatted as a title
-
-    A paragraph is a title if it has one sentence with all uppercase letters
-    */
-    bool IsTitle()
-    {
-        if( myElement.size() != 1 )
-            return false;
-        for( auto c : myElement[0]->myText ) {
-            if( islower( c ) )
-                return false;
-        }
-        return true;
-    }
-    void Dump()
-    {
-        // Do not display empty paragraphs
-        if( ! myElement.size() )
-            return;
-
-        std::cout << "\nPARAGAPH:";
-        for( auto e : myElement )
-            e->Dump();
-        std::cout << "\nEND_PARAGRAPH ";
-    }
-};
-
-class cSection
-{
-public:
-    std::vector< cElement* > myElement;
-    void Add( const cParagraph& paragraph )
-    {
-        myElement.push_back( new cParagraph( paragraph ));
-    }
-    void Add( const cSentence& sentence )
-    {
-        if( ! myElement.size() )
-            throw std::runtime_error("No paragraph for sentence");
-        myElement.back()->Add( new cSentence( sentence ) );
-    }
-    void Add( const cTitle& title )
-    {
-        myElement.push_back( new cTitle( title ) );
-    }
-    void Dump()
-    {
-        std::cout << "\nSECTION:";
-        for( auto e : myElement )
-            e->Dump();
-        std::cout << "END_SECTION\n";
-    }
-};
-class cText
-{
-public:
-    std::vector< cSection > mySection;
-    int myIndex;
-
-    cText()
-        : myIndex( ++myLastIndex )
-    {
-    }
-    void Add( const cSection& section )
-    {
-        mySection.push_back( section );
-    }
-    void Add( const cParagraph& paragraph )
-    {
-        mySection.back().Add( paragraph );
-    }
-    void Add( const cSentence& sentence )
-    {
-        mySection.back().Add( sentence );
-    }
-    void Add( const cTitle& title )
-    {
-        mySection.back().Add( title );
-    }
-    void Dump()
-    {
-        std::cout << "TEXT "<< myIndex << ":\n";
-        for( auto& s : mySection )
-            s.Dump();
-        std::cout << "END_TEXT\n\n";
-    }
-    void Swap()
-    {
-        if( mySection.size() > 1 )
-        {
-            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-
-            std::shuffle (mySection.begin(), mySection.end(), std::default_random_engine(seed));
-        }
-    }
-private:
-    static int myLastIndex;
-};
 int cText::myLastIndex = 0;
 
-class cSwapTextFile
+void cSwapTextFile::Read( const std::string& filename )
 {
-public:
+    std::ifstream in( filename.c_str() );
+    if( ! in.is_open() )
+        throw std::runtime_error("Cannot open input file");
+    std::stringstream sstr;
+    sstr << in.rdbuf();
+    myRawText = sstr.str();
+}
 
-    void Read( const std::string& filename )
+void cSwapTextFile::Parse()
+{
+    Add( cText() );
+    Add( cSection() );
+    Add( cParagraph() );
+    int p_now = 0;
+    int p_sentence = 0;
+    int p_para = 0;
+    while( 1 )
     {
-        std::ifstream in( filename.c_str() );
-        if( ! in.is_open() )
-            throw std::runtime_error("Cannot open input file");
-        std::stringstream sstr;
-        sstr << in.rdbuf();
-        myRawText = sstr.str();
-    }
-
-    void Parse()
-    {
-        Add( cText() );
-        Add( cSection() );
-        Add( cParagraph() );
-        int p_now = 0;
-        int p_sentence = 0;
-        int p_para = 0;
-        while( 1 )
+        p_sentence = myRawText.find(".",p_now);
+        p_para = myRawText.find("\n",p_now);
+        if( p_sentence != -1 )
         {
-            p_sentence = myRawText.find(".",p_now);
-            p_para = myRawText.find("\n",p_now);
-            if( p_sentence != -1 )
+            Add( cSentence( myRawText.substr(p_now,p_sentence-p_now+1)));
+            p_now = p_sentence+2;
+            if( p_now > p_para )
             {
-                Add( cSentence( myRawText.substr(p_now,p_sentence-p_now+1)));
-                p_now = p_sentence+2;
-                if( p_now > p_para ) {
 
-                    // reached the end of a para
+                // reached the end of a para
 
-                    CheckForTitle();
+                CheckForTitle();
 
-                    // start next para
-                    Add( cParagraph() );
-                }
-            }
-            else
-            {
-                return;
+                CheckForSection();
+
+                // start next para
+                Add( cParagraph() );
             }
         }
-
-    }
-    void Add( const cText& text )
-    {
-        myText.push_back( text );
-    }
-    void Add( const cSection& section )
-    {
-        myText.back().Add( section );
-    }
-    void Add( const cParagraph& paragraph )
-    {
-        myText.back().Add( paragraph );
-    }
-    void Add( const cSentence& sentence )
-    {
-        myText.back().Add( sentence );
-    }
-    void Add( const cTitle& title )
-    {
-        myText.back().Add( title );
-    }
-    void Dump()
-    {
-        for( auto& t : myText )
+        else
         {
-            t.Dump();
-        }
-    }
-    void Swap()
-    {
-        for( auto& t : myText )
-        {
-            t.Swap();
-        }
-    }
-
-
-private:
-    std::vector< cText > myText;
-    std::string myRawText;
-
-    /** Check if last paragraph is actually a title */
-    void CheckForTitle()
-    {
-        // get last element
-        cElement * lp = myText.back().mySection.back().myElement.back();
-
-        // check for paragraph that is really a title
-        if( ! lp->IsTitle() )
             return;
+        }
+    }
+}
+void cSwapTextFile::CheckForTitle()
+{
+    // get last element
+    cElement * lp = myText.back().mySection.back().myElement.back();
 
-        // add the title
-        Add( cTitle( lp->myElement[0]->myText ) );
+    // check for paragraph that is really a title
+    if( ! lp->IsTitle() )
+        return;
 
-        // null the paragraph that was a title
-        lp->clear();
+    dump_last_section_elements();
+
+    // add the title
+    Add( cTitle( lp->myElement[0]->myText ) );
+    std::cout << lp->myElement[0]->myText << "\n";
+    if( lp->myElement[0]->myText == "SELECTION.")
+        int dbg = 0;
+
+    // null the paragraph that was a title
+    //lp->clear();
+    myText.back().mySection.back().myElement.erase(
+        myText.back().mySection.back().myElement.end()-2 );
+
+    dump_last_section_elements();
+}
+
+void cSwapTextFile::dump_last_section_elements()
+{
+     auto& last_section_elements = myText.back().mySection.back().myElement;
+    for( auto e : last_section_elements )
+        std::cout << (int)e->myType << " ";
+    std::cout << "\n";
+}
+
+void cSwapTextFile::CheckForSection()
+{
+    auto& last_section_elements = myText.back().mySection.back().myElement;
+    int count = last_section_elements.size();
+    if( count < 2 )
+        return;
+    for( auto e : last_section_elements )
+        std::cout << (int)e->myType << " ";
+    std::cout << "\n";
+    if( last_section_elements[count-1]->myType == cElement::eType::title
+            && last_section_elements[count-2]->myType == cElement::eType::title )
+    {
+        // Two titles together indicate the start of a new section
+        cElement * t1 = last_section_elements[count-2];
+        cElement * t2 = last_section_elements[count-1];
+        last_section_elements.erase(last_section_elements.end()-1);
+        last_section_elements.erase(last_section_elements.end()-1);
+        Add( cSection() );
+        Add( cTitle( t1->myText ) );
+        Add( cTitle( t2->myText ) );
+        delete t1;
+        delete t2;
+
 
     }
-};
 
+}
 int main()
 {
     cSwapTextFile input;

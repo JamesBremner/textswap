@@ -4,6 +4,7 @@ TOOL.
 We are developing a tool and we need a mathematician to help us take the best decision.
 With this tool, users will import a batch of several hundreds or thousands of texts, gathered in 1 file. All these texts will have the same structure (same number of sections, blocks, titles, paragraphs and sentences, all in the same order.
 CONFIGURATION.
+SELECTION.
 Users will then define.
 1/ Select only a part of the elements.
 ? If we must use all sections for the output texts or if the tool must use between x and y sections upon the total number of sections that we have in the origin texts.
@@ -11,7 +12,7 @@ Users will then define.
 ? Same with paragraphs inside blocks and sections.
 ? Same with sentences inside paragraphs.
 ? If we can sometimes hide the title of a block or if we must "print" it in each and every output text.
-2/ Swap some elements.
+SWAP.
 ? If we can swap the sections to get them in a different order in each and every output text.
 ? Same with blocks inside sections.
 ? Same with paragraphs inside blocks and sections.
