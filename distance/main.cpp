@@ -3,10 +3,22 @@
 #include <vector>
 #include <algorithm>
 
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/moment.hpp>
+
 using namespace std;
 
 typedef char                elem_t;
 
+struct sWeight
+{
+    float move;
+    float presence;
+};
 class cNGram
 {
 public:
@@ -81,6 +93,7 @@ public:
 
     /** Display text of converted output */
     string Text();
+    string TextElements();
 
     /** Find matching ngrams */
     void Match( cOutput& o );
@@ -112,6 +125,14 @@ string cOutput::Text()
     {
         ss << g.Text() << " ";
     }
+    return ss.str();
+}
+
+string cOutput::TextElements()
+{
+    stringstream ss;
+    for( auto& e : myElement )
+        ss << e;
     return ss.str();
 }
 
@@ -217,16 +238,21 @@ int cOutput::Match( cNGram& seq )
     return -1;
 }
 
+/** Calculate distance between two outputs */
 float Distance3(    cOutput& o1,
-                    cOutput& o2
+                    cOutput& o2,
+                    const sWeight& W
                )
 {
+    cout << "\n Distance calculation " << o1.TextElements() << " V " << o2.TextElements() << "\n";
+
     int total_move_count = 0;
+    int presence_count    = 0;
 
     // Find matching ngrams of length 2 or greater in two outputs
     o1.Match( o2 );
 
-    cout << "\n Distance calculations:\n";
+
 
     // loop over ngrams in output 1
     for( auto& g : o1.myGram )
@@ -246,6 +272,7 @@ float Distance3(    cOutput& o1,
         else
         {
             cout << g.Text() << " present in 1st output only\n";
+            presence_count++;
         }
     }
 
@@ -254,11 +281,14 @@ float Distance3(    cOutput& o1,
     {
         if( o1.Where( g ) == -1 )
         {
+            presence_count++;
             cout << g.Text() << " present in 2nd output only\n";
         }
     }
 
-    return total_move_count;
+    float t = total_move_count * W.move + presence_count * W.presence;
+    cout << "Distance score " << t << "\n";
+    return t;
 }
 
 void cOutput::Convert( vector< cNGram >& vg )
@@ -303,30 +333,47 @@ int main()
 {
     std::cout << "Distance Calculator built " << __DATE__ << " at " << __TIME__ << "\n";
 
+    boost::accumulators::accumulator_set<float, boost::accumulators::stats<
+    boost::accumulators::tag::mean, boost::accumulators::tag::min, boost::accumulators::tag::max > > acc;
 
     // specify input and distance parameters
-    int input_element_count;
-    float deletion_weight;
-    float element_count_weight;
-    float presence_weight;
-    float move_weight;
+    sWeight W;
+    cout << "Enter move weight\n : ";
+    cin >> W.move;
+    cout << "\nEnter presence weight\n : ";
+    cin >> W.presence;
 
     std::string output;
-    cOutput o1, o2;
     while( 1 )
     {
-        cout << "\nEnter two outputs, e.g. 'abc cba' ( <ctrl-c> to quit )  \n :";
+        cout << "\nEnter outputs space delimited, e.g. 'abc cba xyz' ( <ctrl-c> to quit )  \n :";
 
-        cin >> output;
-        o1.Parse( output );
+        string line;
+        std::getline (std::cin,line);
+        vector< cOutput > vOutput;
+        std::stringstream sst(line);
+        std::string a;
+        while( getline( sst, a, ' ' ) )
+        {
+            cOutput o;
+            o.Parse( a );
+            vOutput.push_back( o );
+        }
 
-        cin >> output;
-        o2.Parse( output );
+        for( int k = 0; k < vOutput.size(); k++ )
+        {
+            for( int k2 = k+1; k2 < vOutput.size(); k2++ )
+            {
+                cOutput o1( vOutput[k] );
+                cOutput o2( vOutput[k2] );
+                float ds = Distance3( o1, o2, W );
+                acc( ds );
+            }
+        }
 
-        cout << "\n";
-
-        Distance3( o1, o2 );
-
+        cout << "\nMin Distance:   " << boost::accumulators::min( acc ) << std::endl;
+        cout << "Mean Distance:   " << boost::accumulators::mean( acc ) << std::endl;
+        cout << "Max Distance:   " << boost::accumulators::max( acc ) << std::endl;
     }
 
     return 0;

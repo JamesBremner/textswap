@@ -33,6 +33,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
+			<Add directory="$(#boost)" />
 		</Compiler>
 		<Unit filename="main.cpp" />
 		<Extensions>
