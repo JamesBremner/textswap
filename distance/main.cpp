@@ -1,61 +1,177 @@
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <algorithm>
 
 using namespace std;
 
-enum class eAlgo
+typedef char                elem_t;
+
+class cNGram
 {
-    input_output,
-    output_output
+public:
+    vector< elem_t > myElem;
+    cNGram()
+    {
+
+    }
+    cNGram( elem_t c )
+        : myElem(
+    {
+        c
+    } )
+    {
+
+    }
+    int size() const
+    {
+        return (int) myElem.size();
+    }
+    string Text()
+    {
+        stringstream ss;
+        ss << "'";
+        for( auto c : myElem )
+            ss << c;
+        ss << "'";
+        return ss.str();
+    }
+    vector<elem_t>::iterator begin()
+    {
+        return myElem.begin();
+    }
+    vector<elem_t>::iterator end()
+    {
+        return myElem.end();
+    }
+    bool operator==(const cNGram& rhs) const
+    {
+        if( size() != rhs.size() )
+            return false;
+        for( int k = 0; k < size(); k++ )
+            if( myElem[k] != rhs.myElem[k] )
+                return false;
+        return true;
+    }
 };
 
-bool is_sequence_in( vector<char>& target, vector<char>& v )
+class cOutput
 {
-//    cout << "checking ";
-//    for( auto c : target )
-//        cout << c;
-//    cout << "\n";
+public:
+    vector< elem_t > myElement;     // output as a vector of individual elements
+    vector< cNGram >   myGram;      // output as a vector of matching n-grams
 
-    for( int kv = 0; kv <= v.size()-target.size(); kv++ )
+    /** Parse input string of characters representing elements */
+    void Parse( const string& s );
+
+    int size()
     {
-        if( v[kv] != target[0] )
-            continue;
-        bool success = true;
-        for( int kt = 0; kt < target.size(); kt++ )
+        return (int) myElement.size();
+    }
+    vector< elem_t >::iterator begin()
+    {
+        return myElement.begin();
+    }
+    vector< elem_t >::iterator end()
+    {
+        return myElement.end();
+    }
+    /** find location of element */
+    int find( elem_t& c );
+
+    /** Display text of converted output */
+    string Text();
+
+    /** Find matching ngrams */
+    vector< cNGram > Match( cOutput& o );
+
+    /** Find match for a ngram in unconverted output */
+    int Match( cNGram& g );
+
+    /** Index of a ngram in the converted output */
+    int Where( cNGram& g );
+
+    /** Convert from elements to matching ngrams of elements */
+    void Convert( vector< cNGram >& g );
+
+};
+    void cOutput::Parse( const string& s )
+    {
+        myElement.clear();
+        myGram.clear();
+        for( auto c : s )
         {
-            if( target[kt] != v[kv+kt] )
-            {
-                success = false;
-                break;
-            }
-            if( success )
-                return true;
+            myElement.push_back( c );
+            myGram.push_back( cNGram( c ) );
         }
     }
-    return false;
-}
-
-vector< vector<char> > find_sequences(
-    vector<char>& vo1,
-    vector<char>& vo2 )
-{
-    vector< vector<char> > ret;
-    vector<char> test_sequence;
-    for( int k = 0; k < vo1.size()-1; k++ )
+    string cOutput::Text()
     {
-        for( int len = vo1.size()-k; len > 1; len-- )
+        stringstream ss;
+        for( auto& g : myGram )
         {
-            test_sequence.clear();
-            for( int l = 0; l < len; l++ )
-                test_sequence.push_back( vo1[k+l] );
+            ss << g.Text() << " ";
+        }
+        return ss.str();
+    }
 
-            if( is_sequence_in( test_sequence, vo2 ) )
+    int cOutput::find( elem_t& c )
+    {
+        int i = -1;
+        for( auto e : myElement )
+        {
+            i++;
+            if( e == c )
+                return i;
+
+        }
+        return -1;
+    }
+///    cout << "checking ";
+////    for( auto c : target )
+////        cout << c;
+////    cout << "\n";
+//
+//    bool success;
+//    for( int kv = 0; kv <= o.size()-target.size(); kv++ )
+//    {
+//        if( o.myElement[kv] != target.myElem[0] )
+//            continue;
+//        success = true;
+//        for( int kt = 0; kt < target.size(); kt++ )
+//        {
+//            if( target.myElem[kt] != o.myElement[kv+kt] )
+//            {
+//                success = false;
+//                break;
+//            }
+//        }
+//    }
+//    return success;
+//}
+
+/** Find sequences in two element lists
+
+A sequence is two or more elements adjacent and in the same order in both outputs being compared
+
+*/
+
+vector< cNGram > cOutput::Match(
+    cOutput& o2 )
+{
+    vector< cNGram > ret;
+
+    for( int k = 0; k < size()-1; k++ )
+    {
+        for( int len = size()-k; len > 1; len-- )
+        {
+            cNGram test_sequence;
+            test_sequence.myElem = vector< char > ( begin()+k, begin()+k+len );
+
+            //if( is_sequence_in( test_sequence, o2 ) )
+            if( o2.Match( test_sequence ) != -1 )
             {
-////                cout << "Found sequence ";
-////                for( auto c : test_sequence )
-////                    cout << c;
-////                cout << "\n";
+                // cout << "Found sequence " << test_sequence.Text() << "\n";
 
                 ret.push_back( test_sequence );
 
@@ -66,17 +182,114 @@ vector< vector<char> > find_sequences(
             }
         }
     }
-    cout << "Sequences found ";
-    for( auto& s : ret ) {
-        cout << "'";
-        for( auto c : s ) {
-            cout << c;
-        }
-        cout << "' ";
-    }
-    cout << "\n";
+//    cout << "Sequences found ";
+//    for( auto& s : ret )
+//    {
+//        cout << s.Text();
+//    }
+//    cout << "\n";
 
     return ret;
+}
+
+int cOutput::Match( cNGram& seq )
+{
+    int it = find( seq.myElem[0] );
+    if( it == -1 )
+        return -1;
+    while( 1 )
+    {
+        bool success = true;
+        for( int k = 1; k < seq.size(); k++ )
+        {
+            if( seq.myElem[k] != myElement[ it+k ] )
+            {
+                success = false;
+                break;
+            }
+        }
+        if( success )
+            return it;
+    }
+    return -1;
+}
+
+float Distance3(    cOutput& o1,
+                    cOutput& o2
+               )
+{
+    int total_move_count = 0;
+
+    // Find matching ngrams of length 2 or greater in two outputs
+
+    vector< cNGram > vseqs = o1.Match( o2 );
+
+    // Represent the outputs as vectors of matching ngrams of length 2 or more and unmatched 1-grams
+    cout << "Outputs with matching n-grams:\n";
+    o1.Convert( vseqs );
+    o2.Convert( vseqs );
+
+    cout << "\n Distance calculations:\n";
+
+    // loop over ngrams in output 1
+    for( auto& g : o1.myGram )
+    {
+        // locate ngrams in both outputs
+        int i1 = o1.Where( g );
+        int i2 = o2.Where( g );
+
+        if( i2 >= 0 )
+        {
+            // ngram is present in both outputs, possibly moved
+
+            int m = abs( i1 - i2 );
+            cout << g.Text() << " moved " << m << "\n";
+            total_move_count += m;
+        }
+        else
+        {
+            cout << g.Text() << " present in 1st output only\n";
+        }
+    }
+
+    // loop over ngrams in 2nd output
+    for( auto& g :o2.myGram )
+    {
+        if( o1.Where( g ) == -1 )
+        {
+            cout << g.Text() << " present in 2nd output only\n";
+        }
+    }
+
+    return total_move_count;
+}
+
+void cOutput::Convert( vector< cNGram >& vg )
+{
+    for( auto& g : vg  )
+    {
+        int i = Match( g );
+        if( i == -1 )
+            continue;
+        for( int k = i; k < i+g.size(); k++ )
+        {
+            myGram[k] = g;
+        }
+    }
+    myGram.erase( unique( myGram.begin(), myGram.end() ), myGram.end() );
+    cout << Text() << "\n";
+}
+
+int cOutput::Where( cNGram& target )
+{
+    int i = -1;
+    for( auto& g : myGram )
+    {
+        i++;
+        if( g == target )
+            return i;
+    }
+    return -1;
 }
 
 int main()
@@ -91,157 +304,22 @@ int main()
     float presence_weight;
     float move_weight;
 
-    eAlgo algo;
-//    cout << "Enter distance calcutation required, 1 for input v output, 2 for output v output\n :";
-//    int choice;
-//    cin >> choice;
-//    if( 0 >= choice || choice > 2 )
-//    {
-//        cout << "invalid choice\n";
-//        return 1;
-//    }
-//    algo = ( eAlgo ) ( choice - 1 );
-    algo = eAlgo::output_output;
-
-    switch( algo )
-    {
-
-    case eAlgo::input_output:
-        cout << "Enter input element count, e.g. 10   \n :";
-        cin >> input_element_count;
-        cout << "Enter deletion weight  ( suggest " << input_element_count / 2 << " )  \n :";
-        cin >> deletion_weight;
-        break;
-
-    case eAlgo::output_output:
-        cout << "Enter input element count weight\n : ";
-        cin >> element_count_weight;
-        cout << "Enter presence weight\n : ";
-        cin >> presence_weight;
-        cout << "Enter move weight\n : ";
-        cin >> move_weight;
-        break;
-    }
-
     std::string output;
-    std::vector<char> vout;
-    std::vector<char> vout2;
+    cOutput o1, o2;
     while( 1 )
     {
-        cout << "\nenter first output, e.g. abc ( <ctrl-c> to quit )  \n :";
+        cout << "\nEnter two outputs, e.g. 'abc cba' ( <ctrl-c> to quit )  \n :";
+
         cin >> output;
+        o1.Parse( output );
+
+        cin >> output;
+        o2.Parse( output );
+
         cout << "\n";
 
-        // parse output
-        if( ! output.length() )
-            return 0;
-        for( auto c : output )
-            vout.push_back( c );
+        Distance3( o1, o2 );
 
-        // re-initilaize distance calculation
-        int deletion_count = 0;
-        int move_count = 0;
-        int element_count_delta = 0;
-        int presence_delta = 0;
-
-        switch( algo )
-        {
-        case eAlgo::input_output:
-            // loop over original elements
-            for( int k = 1; k <= input_element_count; k++ )
-            {
-                // find new position of element
-                auto it = find (vout.begin(), vout.end(), k);
-                if (it == vout.end())
-                {
-
-                    // element was deleted
-                    deletion_count++;
-                }
-                else
-                {
-                    // how far was it moved from original position
-                    int move = abs( (int)(it - vout.begin() ) - k + 1 );
-
-                    if( move > 0 )
-                        cout << k << " moved " << move << "\n";
-                    move_count += move;
-                }
-            }
-
-            // display results
-            cout << deletion_count << " deletions "
-                 <<  move_count << " moves\n"
-                 << "\nTotal distance from input "
-                 << move_count + deletion_weight * deletion_count
-                 << "\n";
-
-            break;
-
-        case eAlgo::output_output:
-
-            cout << "\nenter second output, e.g. abc ( <ctrl-c> to quit )  \n :";
-            cin >> output;
-            cout << "\n";
-
-            // parse output
-            if( ! output.length() )
-                return 0;
-            for( auto c : output )
-                vout2.push_back( c );
-
-            find_sequences( vout, vout2 );
-
-            element_count_delta = abs( (int) ( vout.size() - vout2.size() ) );
-
-            for( auto v1 : vout )
-            {
-                //std::cout << "loop " << v1 << "\n";
-                auto it2 = find( vout2.begin(), vout2.end(), v1 );
-                if( it2 == vout2.end() )
-                {
-                    cout << v1 << " not present in 2nd output\n";
-                    presence_delta++;
-                }
-                else
-                {
-                    auto it1 = find( vout.begin(), vout.end(), v1 );
-                    int move = abs( (int)(it1 - vout.begin() ) - (int)(it2 - vout2.begin() ) );
-                    if( move )
-                        std::cout << v1 << " moved " << move << "\n";
-                    move_count += move;
-                }
-            }
-            for( auto v2 : vout2 )
-            {
-                auto it = find( vout.begin(), vout.end(), v2 );
-                if( it == vout.end() )
-                {
-                    cout << v2 << " not present in 1st output\n";
-                    presence_delta++;
-                }
-            }
-            std::cout << "\n\ncomparing '";
-            for( auto c : vout )
-                std::cout << c;
-            cout << "' with '";
-            for( auto c : vout2 )
-                std::cout << c;
-            cout << "'\n";
-            float TotalDistance = element_count_delta * element_count_weight
-                                  + presence_delta * presence_weight
-                                  + move_count * move_weight;
-            cout << "element_count_delta " << element_count_delta
-                 << " presence delta " << presence_delta
-                 << " move count " << move_count
-                 << "\nTotal distance " << TotalDistance
-                 << "\n";
-
-            break;
-
-        }
-
-        // loop for next user input
     }
 
     return 0;
