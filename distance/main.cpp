@@ -83,7 +83,7 @@ public:
     string Text();
 
     /** Find matching ngrams */
-    vector< cNGram > Match( cOutput& o );
+    void Match( cOutput& o );
 
     /** Find match for a ngram in unconverted output */
     int Match( cNGram& g );
@@ -95,38 +95,38 @@ public:
     void Convert( vector< cNGram >& g );
 
 };
-    void cOutput::Parse( const string& s )
+void cOutput::Parse( const string& s )
+{
+    myElement.clear();
+    myGram.clear();
+    for( auto c : s )
     {
-        myElement.clear();
-        myGram.clear();
-        for( auto c : s )
-        {
-            myElement.push_back( c );
-            myGram.push_back( cNGram( c ) );
-        }
+        myElement.push_back( c );
+        myGram.push_back( cNGram( c ) );
     }
-    string cOutput::Text()
+}
+string cOutput::Text()
+{
+    stringstream ss;
+    for( auto& g : myGram )
     {
-        stringstream ss;
-        for( auto& g : myGram )
-        {
-            ss << g.Text() << " ";
-        }
-        return ss.str();
+        ss << g.Text() << " ";
     }
+    return ss.str();
+}
 
-    int cOutput::find( elem_t& c )
+int cOutput::find( elem_t& c )
+{
+    int i = -1;
+    for( auto e : myElement )
     {
-        int i = -1;
-        for( auto e : myElement )
-        {
-            i++;
-            if( e == c )
-                return i;
+        i++;
+        if( e == c )
+            return i;
 
-        }
-        return -1;
     }
+    return -1;
+}
 ///    cout << "checking ";
 ////    for( auto c : target )
 ////        cout << c;
@@ -156,7 +156,7 @@ A sequence is two or more elements adjacent and in the same order in both output
 
 */
 
-vector< cNGram > cOutput::Match(
+void cOutput::Match(
     cOutput& o2 )
 {
     vector< cNGram > ret;
@@ -189,7 +189,10 @@ vector< cNGram > cOutput::Match(
 //    }
 //    cout << "\n";
 
-    return ret;
+    Convert( ret );
+    o2.Convert( ret );
+
+    return;
 }
 
 int cOutput::Match( cNGram& seq )
@@ -221,13 +224,7 @@ float Distance3(    cOutput& o1,
     int total_move_count = 0;
 
     // Find matching ngrams of length 2 or greater in two outputs
-
-    vector< cNGram > vseqs = o1.Match( o2 );
-
-    // Represent the outputs as vectors of matching ngrams of length 2 or more and unmatched 1-grams
-    cout << "Outputs with matching n-grams:\n";
-    o1.Convert( vseqs );
-    o2.Convert( vseqs );
+    o1.Match( o2 );
 
     cout << "\n Distance calculations:\n";
 
@@ -266,17 +263,27 @@ float Distance3(    cOutput& o1,
 
 void cOutput::Convert( vector< cNGram >& vg )
 {
+    // loop over matching ngrams
     for( auto& g : vg  )
     {
+        // find ngram in elements
         int i = Match( g );
         if( i == -1 )
             continue;
+
+        // replace all elements with ngram
         for( int k = i; k < i+g.size(); k++ )
         {
             myGram[k] = g;
         }
     }
-    myGram.erase( unique( myGram.begin(), myGram.end() ), myGram.end() );
+
+    // remove all but first refence to each ngram
+    myGram.erase(
+        unique( myGram.begin(), myGram.end() ),
+        myGram.end() );
+
+    // display results
     cout << Text() << "\n";
 }
 
