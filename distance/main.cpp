@@ -13,90 +13,10 @@
 #include <boost/accumulators/statistics/min.hpp>
 #include <boost/accumulators/statistics/moment.hpp>
 
-class cElement
-{
-public:
-    cElement( char c )
-        : myID(
-    {
-        c
-    } )
-    {
-    }
-    cElement( const std::string& text )
-        : myText( text )
-    {
-        char cid = myLastID++ + 'a';
-        myID = std::string( { cid } );
-    }
-    std::string  TextID()
-    {
-        return myID;
-    }
-    std::string TextText()
-    {
-        return myText;
-    }
-    static void ResetID()
-    {
-        myLastID = 0;
-    }
-    bool operator==(const cElement& rhs) const
-    {
-        return myID == rhs.myID;
-    }
-    bool operator!=(const cElement& rhs) const
-    {
-        return myID != rhs.myID;
-    }
-private:
-    std::string myID;
-    static int myLastID;
-    std::string myText;
-};
-
 #include "cOutput.h"
+#include "cFileText.h"
 
-int cElement::myLastID = 0;
-
-typedef std::vector< cElement * > para_t;
-typedef std::vector< para_t > section_t;
-typedef std::vector< section_t > text_t;
-
-class cFile
-{
-public:
-    std::vector< text_t > myText;
-
-    cFile();
-    void AddText();
-    void AddSection();
-    void AddPara();
-    void AddSentence( const std::string& e );
-
-    std::string Text();
-
-    void Shuffle();
-
-    cOutput Output( int text );
-
-
-private:
-    text_t& LastText()
-    {
-        return myText.back();
-    }
-    section_t& LastSection()
-    {
-        return LastText().back();
-    }
-    para_t& LastPara()
-    {
-        return LastSection().back();
-    }
-};
-
-
+int cSentence::myLastID = 0;
 
 using namespace std;
 
@@ -108,23 +28,23 @@ struct sWeight
     float presence;
 };
 
-cFile::cFile()
+cFileText::cFileText()
 {
     AddText();
 }
-void cFile::AddSentence( const std::string& text )
+void cFileText::AddSentence( const std::string& text )
 {
-    LastPara().push_back( new cElement( text ) );
+    LastPara().push_back( new cSentence( text ) );
 }
-void cFile::AddPara()
+void cFileText::AddPara()
 {
     LastSection().push_back( para_t() );
 }
-void cFile::AddSection()
+void cFileText::AddSection()
 {
     LastText().push_back( section_t() );
 }
-void cFile::AddText()
+void cFileText::AddText()
 {
     // create para with no sentence
     para_t p;
@@ -139,9 +59,9 @@ void cFile::AddText()
 
     myText.push_back( t );
 
-    cElement::ResetID();
+    cSentence::ResetID();
 }
-string cFile::Text()
+string cFileText::Text()
 {
     stringstream ss;
     int text_count = 1;
@@ -168,7 +88,7 @@ string cFile::Text()
     return ss.str();
 }
 
-void cFile::Shuffle()
+void cFileText::Shuffle()
 {
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine re(seed);
@@ -183,7 +103,7 @@ void cFile::Shuffle()
         }
     }
 }
-cOutput cFile::Output( int text )
+cOutput cFileText::Output( int text )
 {
     string so;
     auto& t = myText[ text ];
@@ -202,11 +122,7 @@ cOutput cFile::Output( int text )
     return o;
 }
 
-cNGram::cNGram( cOutput& o, int pos, int len )
-{
-    for( int k = pos; k < pos+len; k++ )
-        myElem.push_back( o.myElement[k] );
-}
+
 
 void cOutput::Parse( const string& s )
 {
@@ -236,7 +152,7 @@ string cOutput::TextElements()
     return ss.str();
 }
 
-int cOutput::find( elem_t& c )
+int cOutput::find( cSentence& c )
 {
     int i = -1;
     for( auto e : myElement )
@@ -288,13 +204,13 @@ void cOutput::Match(
 
 int cOutput::Match( cNGram& seq )
 {
-    int it = find( seq.myElem[0] );
+    int it = find( seq[0] );
     if( it == -1 )
         return -1;
 
     for( int k = 1; k < seq.size(); k++ )
     {
-        if( seq.myElem[k] != myElement[ it+k ] )
+        if( seq[k] != myElement[ it+k ] )
         {
             return -1;
         }
@@ -404,7 +320,7 @@ int main()
     cout << "\nEnter presence weight\n : ";
     cin >> W.presence;
 
-    cFile theFile;
+    cFileText theFile;
     theFile.AddSentence( "test 1." );
     theFile.AddSentence( "test 2." );
     theFile.AddSentence(  "test 3." );
