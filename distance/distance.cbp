@@ -35,6 +35,7 @@
 			<Add option="-fexceptions" />
 			<Add directory="$(#boost)" />
 		</Compiler>
+		<Unit filename="cOutput.h" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />

@@ -3,6 +3,9 @@
 #include <vector>
 #include <algorithm>
 
+#include <random>       // std::default_random_engine
+#include <chrono>       // std::chrono::system_clock
+
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
@@ -10,104 +13,201 @@
 #include <boost/accumulators/statistics/min.hpp>
 #include <boost/accumulators/statistics/moment.hpp>
 
+class cElement
+{
+public:
+    cElement( char c )
+        : myID(
+    {
+        c
+    } )
+    {
+    }
+    cElement( const std::string& text )
+        : myText( text )
+    {
+        char cid = myLastID++ + 'a';
+        myID = std::string( { cid } );
+    }
+    std::string  TextID()
+    {
+        return myID;
+    }
+    std::string TextText()
+    {
+        return myText;
+    }
+    static void ResetID()
+    {
+        myLastID = 0;
+    }
+    bool operator==(const cElement& rhs) const
+    {
+        return myID == rhs.myID;
+    }
+    bool operator!=(const cElement& rhs) const
+    {
+        return myID != rhs.myID;
+    }
+private:
+    std::string myID;
+    static int myLastID;
+    std::string myText;
+};
+
+#include "cOutput.h"
+
+int cElement::myLastID = 0;
+
+typedef std::vector< cElement * > para_t;
+typedef std::vector< para_t > section_t;
+typedef std::vector< section_t > text_t;
+
+class cFile
+{
+public:
+    std::vector< text_t > myText;
+
+    cFile();
+    void AddText();
+    void AddSection();
+    void AddPara();
+    void AddSentence( const std::string& e );
+
+    std::string Text();
+
+    void Shuffle();
+
+    cOutput Output( int text );
+
+
+private:
+    text_t& LastText()
+    {
+        return myText.back();
+    }
+    section_t& LastSection()
+    {
+        return LastText().back();
+    }
+    para_t& LastPara()
+    {
+        return LastSection().back();
+    }
+};
+
+
+
 using namespace std;
 
-typedef char                elem_t;
+
 
 struct sWeight
 {
     float move;
     float presence;
 };
-class cNGram
+
+cFile::cFile()
 {
-public:
-    vector< elem_t > myElem;
-    cNGram()
-    {
-
-    }
-    cNGram( elem_t c )
-        : myElem(
-    {
-        c
-    } )
-    {
-
-    }
-    int size() const
-    {
-        return (int) myElem.size();
-    }
-    string Text()
-    {
-        stringstream ss;
-        ss << "'";
-        for( auto c : myElem )
-            ss << c;
-        ss << "'";
-        return ss.str();
-    }
-    vector<elem_t>::iterator begin()
-    {
-        return myElem.begin();
-    }
-    vector<elem_t>::iterator end()
-    {
-        return myElem.end();
-    }
-    bool operator==(const cNGram& rhs) const
-    {
-        if( size() != rhs.size() )
-            return false;
-        for( int k = 0; k < size(); k++ )
-            if( myElem[k] != rhs.myElem[k] )
-                return false;
-        return true;
-    }
-};
-
-class cOutput
+    AddText();
+}
+void cFile::AddSentence( const std::string& text )
 {
-public:
-    vector< elem_t > myElement;     // output as a vector of individual elements
-    vector< cNGram >   myGram;      // output as a vector of matching n-grams
+    LastPara().push_back( new cElement( text ) );
+}
+void cFile::AddPara()
+{
+    LastSection().push_back( para_t() );
+}
+void cFile::AddSection()
+{
+    LastText().push_back( section_t() );
+}
+void cFile::AddText()
+{
+    // create para with no sentence
+    para_t p;
 
-    /** Parse input string of characters representing elements */
-    void Parse( const string& s );
+    // create section with one paragraph
+    section_t s;
+    s.push_back( p );
 
-    int size()
+    // create a text with one section
+    text_t t;
+    t.push_back( s );
+
+    myText.push_back( t );
+
+    cElement::ResetID();
+}
+string cFile::Text()
+{
+    stringstream ss;
+    int text_count = 1;
+    for( auto& t : myText )
     {
-        return (int) myElement.size();
+        ss << "\nText " << text_count++ << "\n";
+        int section_count = 1;
+        for( auto& s : t )
+        {
+            ss << "\nSection " << section_count++ << "\n";
+            int para_count = 1;
+            for( auto& p : s )
+            {
+                ss << "\nPara " << para_count++ << "\n";
+                for( auto& sent : p )
+                {
+                    ss << "   " << sent->TextID()
+                       << ": " << sent->TextText()
+                       << "\n";
+                }
+            }
+        }
     }
-    vector< elem_t >::iterator begin()
+    return ss.str();
+}
+
+void cFile::Shuffle()
+{
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine re(seed);
+    for( auto & t : myText )
     {
-        return myElement.begin();
+        for( auto & s : t )
+        {
+            for( auto & p : s )
+            {
+                shuffle( p.begin(), p.end(), re );
+            }
+        }
     }
-    vector< elem_t >::iterator end()
+}
+cOutput cFile::Output( int text )
+{
+    string so;
+    auto& t = myText[ text ];
+    for( auto& s : t )
     {
-        return myElement.end();
+        for( auto & p : s )
+        {
+            for( auto& sent : p  )
+            {
+                so += sent->TextID();
+            }
+        }
     }
-    /** find location of element */
-    int find( elem_t& c );
+    cOutput o;
+    o.Parse( so );
+    return o;
+}
 
-    /** Display text of converted output */
-    string Text();
-    string TextElements();
+cNGram::cNGram( cOutput& o, int pos, int len )
+{
+    for( int k = pos; k < pos+len; k++ )
+        myElem.push_back( o.myElement[k] );
+}
 
-    /** Find matching ngrams */
-    void Match( cOutput& o );
-
-    /** Find match for a ngram in unconverted output */
-    int Match( cNGram& g );
-
-    /** Index of a ngram in the converted output */
-    int Where( cNGram& g );
-
-    /** Convert from elements to matching ngrams of elements */
-    void Convert( vector< cNGram >& g );
-
-};
 void cOutput::Parse( const string& s )
 {
     myElement.clear();
@@ -132,7 +232,7 @@ string cOutput::TextElements()
 {
     stringstream ss;
     for( auto& e : myElement )
-        ss << e;
+        ss << e.TextID();
     return ss.str();
 }
 
@@ -148,34 +248,6 @@ int cOutput::find( elem_t& c )
     }
     return -1;
 }
-///    cout << "checking ";
-////    for( auto c : target )
-////        cout << c;
-////    cout << "\n";
-//
-//    bool success;
-//    for( int kv = 0; kv <= o.size()-target.size(); kv++ )
-//    {
-//        if( o.myElement[kv] != target.myElem[0] )
-//            continue;
-//        success = true;
-//        for( int kt = 0; kt < target.size(); kt++ )
-//        {
-//            if( target.myElem[kt] != o.myElement[kv+kt] )
-//            {
-//                success = false;
-//                break;
-//            }
-//        }
-//    }
-//    return success;
-//}
-
-/** Find sequences in two element lists
-
-A sequence is two or more elements adjacent and in the same order in both outputs being compared
-
-*/
 
 void cOutput::Match(
     cOutput& o2 )
@@ -186,13 +258,11 @@ void cOutput::Match(
     {
         for( int len = size()-k; len > 1; len-- )
         {
-            cNGram test_sequence;
-            test_sequence.myElem = vector< char > ( begin()+k, begin()+k+len );
+            cNGram test_sequence( *this, k, len );
 
-            //if( is_sequence_in( test_sequence, o2 ) )
             if( o2.Match( test_sequence ) != -1 )
             {
-                // cout << "Found sequence " << test_sequence.Text() << "\n";
+                cout << "Found sequence " << test_sequence.Text() << "\n";
 
                 ret.push_back( test_sequence );
 
@@ -221,21 +291,15 @@ int cOutput::Match( cNGram& seq )
     int it = find( seq.myElem[0] );
     if( it == -1 )
         return -1;
-    while( 1 )
+
+    for( int k = 1; k < seq.size(); k++ )
     {
-        bool success = true;
-        for( int k = 1; k < seq.size(); k++ )
+        if( seq.myElem[k] != myElement[ it+k ] )
         {
-            if( seq.myElem[k] != myElement[ it+k ] )
-            {
-                success = false;
-                break;
-            }
+            return -1;
         }
-        if( success )
-            return it;
     }
-    return -1;
+    return it;
 }
 
 /** Calculate distance between two outputs */
@@ -333,15 +397,43 @@ int main()
 {
     std::cout << "Distance Calculator built " << __DATE__ << " at " << __TIME__ << "\n";
 
-    boost::accumulators::accumulator_set<float, boost::accumulators::stats<
-    boost::accumulators::tag::mean, boost::accumulators::tag::min, boost::accumulators::tag::max > > acc;
-
     // specify input and distance parameters
     sWeight W;
-    cout << "Enter move weight\n : ";
+    cout << "\nEnter move weight\n : ";
     cin >> W.move;
     cout << "\nEnter presence weight\n : ";
     cin >> W.presence;
+
+    cFile theFile;
+    theFile.AddSentence( "test 1." );
+    theFile.AddSentence( "test 2." );
+    theFile.AddSentence(  "test 3." );
+    theFile.AddSentence(  "test 4." );
+    theFile.AddPara();
+    theFile.AddSentence( "test 5." );
+    theFile.AddSentence( "test 6." );
+    theFile.AddSentence("test 7." );
+    theFile.AddSentence(  "test 8." );
+
+    theFile.AddText();
+    theFile.AddSentence( "test 9." );
+    theFile.AddSentence( "test 10." );
+    theFile.AddSentence(  "test 11." );
+    theFile.AddSentence( "test 12." );
+    theFile.AddPara();
+    theFile.AddSentence(  "test 13." );
+    theFile.AddSentence(  "test 14." );
+    theFile.AddSentence(  "test 15." );
+    theFile.AddSentence(  "test 16." );
+    cout << theFile.Text();
+    theFile.Shuffle();
+    cout << theFile.Text();
+    cOutput o1 = theFile.Output( 0 );
+    cOutput o2 = theFile.Output( 1 );
+    float ds = Distance3( o1, o2, W );
+
+    boost::accumulators::accumulator_set<float, boost::accumulators::stats<
+    boost::accumulators::tag::mean, boost::accumulators::tag::min, boost::accumulators::tag::max > > acc;
 
     std::string output;
     while( 1 )
@@ -360,13 +452,17 @@ int main()
             vOutput.push_back( o );
         }
 
+        // loop over every pair of output
         for( int k = 0; k < vOutput.size(); k++ )
         {
             for( int k2 = k+1; k2 < vOutput.size(); k2++ )
             {
+                // calculate distance between pair
                 cOutput o1( vOutput[k] );
                 cOutput o2( vOutput[k2] );
                 float ds = Distance3( o1, o2, W );
+
+                // accumulate statistics
                 acc( ds );
             }
         }
