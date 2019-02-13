@@ -1,7 +1,13 @@
-class cSentence;
-typedef std::vector< cSentence * > para_t;
-typedef std::vector< para_t > section_t;
-typedef std::vector< section_t > text_t;
+enum class eSwapOption
+{
+    all,
+    none,
+    first_fixed,
+    last_fixed,
+    first_last_fixed
+};
+
+class cOutput;
 
 class cSentence
 {
@@ -60,10 +66,76 @@ private:
 };
 
 
+
+class cPara
+{
+public:
+    eSwapOption mySwap;
+    std::vector< cSentence > mySentence;
+    void push_back( const cSentence& sent )
+    {
+        mySentence.push_back( sent );
+    }
+            std::vector< cSentence >::iterator begin()
+    {
+       return  mySentence.begin();
+    }
+        std::vector< cSentence >::iterator end()
+    {
+       return  mySentence.end();
+    }
+    void Shuffle( std::default_random_engine& re );
+
+};
+class cSection
+{
+public:
+    eSwapOption mySwap;
+    std::vector< cPara > myPara;
+    cPara& back()
+    {
+        return myPara.back();
+    }
+    void push_back( const cPara& para )
+    {
+        myPara.push_back( para );
+    }
+        std::vector< cPara >::iterator begin()
+    {
+        return myPara.begin();
+    }
+        std::vector< cPara >::iterator end()
+    {
+        return myPara.end();
+    }
+};
+class cText
+{
+public:
+    eSwapOption mySwap;
+    std::vector< cSection > mySection;
+    cSection& back()
+    {
+        return mySection.back();
+    }
+        void push_back( const cSection& sect )
+    {
+        mySection.push_back( sect );
+    }
+    std::vector< cSection >::iterator begin()
+    {
+        return mySection.begin();
+    }
+        std::vector< cSection >::iterator end()
+    {
+        return mySection.end();
+    }
+};
+
 class cFileText
 {
 public:
-    std::vector< text_t > myText;
+    std::vector< cText > myText;
 
     cFileText();
     void AddText();
@@ -77,17 +149,19 @@ public:
 
     cOutput Output( int text );
 
+    void setSwapAllParas( eSwapOption swap );
+
 
 private:
-    text_t& LastText()
+    cText& LastText()
     {
         return myText.back();
     }
-    section_t& LastSection()
+    cSection& LastSection()
     {
         return LastText().back();
     }
-    para_t& LastPara()
+    cPara& LastPara()
     {
         return LastSection().back();
     }

@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include <random>       // std::default_random_engine
-#include <chrono>       // std::chrono::system_clock
+
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -34,27 +34,27 @@ cFileText::cFileText()
 }
 void cFileText::AddSentence( const std::string& text )
 {
-    LastPara().push_back( new cSentence( text ) );
+    LastPara().push_back( cSentence( text ) );
 }
 void cFileText::AddPara()
 {
-    LastSection().push_back( para_t() );
+    LastSection().push_back( cPara() );
 }
 void cFileText::AddSection()
 {
-    LastText().push_back( section_t() );
+    LastText().push_back( cSection() );
 }
 void cFileText::AddText()
 {
     // create para with no sentence
-    para_t p;
+    cPara p;
 
     // create section with one paragraph
-    section_t s;
+    cSection s;
     s.push_back( p );
 
     // create a text with one section
-    text_t t;
+    cText t;
     t.push_back( s );
 
     myText.push_back( t );
@@ -78,8 +78,8 @@ string cFileText::Text()
                 ss << "\nPara " << para_count++ << "\n";
                 for( auto& sent : p )
                 {
-                    ss << "   " << sent->TextID()
-                       << ": " << sent->TextText()
+                    ss << "   " << sent.TextID()
+                       << ": " << sent.TextText()
                        << "\n";
                 }
             }
@@ -88,21 +88,7 @@ string cFileText::Text()
     return ss.str();
 }
 
-void cFileText::Shuffle()
-{
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::default_random_engine re(seed);
-    for( auto & t : myText )
-    {
-        for( auto & s : t )
-        {
-            for( auto & p : s )
-            {
-                shuffle( p.begin(), p.end(), re );
-            }
-        }
-    }
-}
+
 cOutput cFileText::Output( int text )
 {
     string so;
@@ -113,7 +99,7 @@ cOutput cFileText::Output( int text )
         {
             for( auto& sent : p  )
             {
-                so += sent->TextID();
+                so += sent.TextID();
             }
         }
     }
@@ -341,6 +327,7 @@ int main()
     theFile.AddSentence(  "test 14." );
     theFile.AddSentence(  "test 15." );
     theFile.AddSentence(  "test 16." );
+    //theFile.setSwapAllParas( eSwapOption::first_last_fixed );
     cout << theFile.Text();
     theFile.Shuffle();
     cout << theFile.Text();
