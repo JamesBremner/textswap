@@ -76,13 +76,17 @@ public:
     {
         mySentence.push_back( sent );
     }
-            std::vector< cSentence >::iterator begin()
+    std::vector< cSentence >::iterator begin()
     {
-       return  mySentence.begin();
+        return  mySentence.begin();
     }
-        std::vector< cSentence >::iterator end()
+    std::vector< cSentence >::iterator end()
     {
-       return  mySentence.end();
+        return  mySentence.end();
+    }
+    int size()
+    {
+        return (int) mySentence.size();
     }
     void Shuffle( std::default_random_engine& re );
 
@@ -100,11 +104,11 @@ public:
     {
         myPara.push_back( para );
     }
-        std::vector< cPara >::iterator begin()
+    std::vector< cPara >::iterator begin()
     {
         return myPara.begin();
     }
-        std::vector< cPara >::iterator end()
+    std::vector< cPara >::iterator end()
     {
         return myPara.end();
     }
@@ -118,7 +122,7 @@ public:
     {
         return mySection.back();
     }
-        void push_back( const cSection& sect )
+    void push_back( const cSection& sect )
     {
         mySection.push_back( sect );
     }
@@ -126,9 +130,13 @@ public:
     {
         return mySection.begin();
     }
-        std::vector< cSection >::iterator end()
+    std::vector< cSection >::iterator end()
     {
         return mySection.end();
+    }
+    int size()
+    {
+        return mySection.size();
     }
 };
 
@@ -138,6 +146,7 @@ public:
     std::vector< cText > myText;
 
     cFileText();
+    cFileText( const std::string& filename );
     void AddText();
     void AddSection();
     void AddPara();

@@ -28,10 +28,7 @@ struct sWeight
     float presence;
 };
 
-cFileText::cFileText()
-{
-    AddText();
-}
+
 void cFileText::AddSentence( const std::string& text )
 {
     LastPara().push_back( cSentence( text ) );
@@ -60,32 +57,6 @@ void cFileText::AddText()
     myText.push_back( t );
 
     cSentence::ResetID();
-}
-string cFileText::Text()
-{
-    stringstream ss;
-    int text_count = 1;
-    for( auto& t : myText )
-    {
-        ss << "\nText " << text_count++ << "\n";
-        int section_count = 1;
-        for( auto& s : t )
-        {
-            ss << "\nSection " << section_count++ << "\n";
-            int para_count = 1;
-            for( auto& p : s )
-            {
-                ss << "\nPara " << para_count++ << "\n";
-                for( auto& sent : p )
-                {
-                    ss << "   " << sent.TextID()
-                       << ": " << sent.TextText()
-                       << "\n";
-                }
-            }
-        }
-    }
-    return ss.str();
 }
 
 
@@ -298,6 +269,15 @@ int cOutput::Where( cNGram& target )
 int main()
 {
     std::cout << "Distance Calculator built " << __DATE__ << " at " << __TIME__ << "\n";
+
+    string filename;
+    cout << "Read JSON text file\n : ";
+    cin >> filename;
+    if( filename.length() > 1 )
+    {
+        cFileText theFile( filename );
+        return 0;
+    }
 
     // specify input and distance parameters
     sWeight W;
