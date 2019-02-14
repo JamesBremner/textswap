@@ -35,7 +35,11 @@
 			<Add option="-fexceptions" />
 			<Add directory="$(#boost)" />
 		</Compiler>
+		<Unit filename="cFileText.cpp" />
+		<Unit filename="cFileText.h" />
+		<Unit filename="cOutput.cpp" />
 		<Unit filename="cOutput.h" />
+		<Unit filename="json.hpp" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />
