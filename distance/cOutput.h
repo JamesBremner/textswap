@@ -33,7 +33,7 @@ public:
     {
         return myElem[x];
     }
-//private:
+private:
     std::vector< cSentence > myElem;
 };
 
@@ -78,12 +78,21 @@ public:
     void Convert( std::vector< cNGram >& vg );
 
 };
+
+/// The weight assigned to particular differences between texts.
 struct sWeight
 {
     float move;
     float presence;
 };
-float Distance3(    cOutput& o1,
-                    cOutput& o2,
-                    const sWeight& W
-               );
+
+/** Calculate distance between two outputs
+    @param[in] o1 first output text
+    @param[in] o2 second output text
+    @return distance
+*/
+float Distance3(
+    cOutput& o1,
+    cOutput& o2,
+    const sWeight& W
+);

@@ -39,12 +39,11 @@ cFileText::cFileText( const std::string& filename )
 
     AddText();
 
-    int textCount = j.size();
+    //int textCount = j.size();
     for (auto& e : j)
     {
         for (auto& e2 : e)
         {
-            int dbg2 = e2.size();
             if( e2.is_string())
             {
                 string s = e2;
@@ -182,8 +181,8 @@ void cFileText::Difference()
     accumulator_set<float, stats<
     tag::mean, tag::min, tag::max, tag::sum > > acc;
 
-    for( int t1 = 0; t1< myText.size() - 1; t1++ )
-        for( int t2 = t1+1; t2< myText.size(); t2++ )
+    for( int t1 = 0; t1< (int)myText.size() - 1; t1++ )
+        for( int t2 = t1+1; t2< (int)myText.size(); t2++ )
         {
             //cout << "Text " << t1+1 << " V " << t2+1 << "\n";
             cOutput o1 = Output( t1 );
