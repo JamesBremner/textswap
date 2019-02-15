@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iostream>
 
+
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
@@ -17,6 +18,9 @@
 #include "cFileText.h"
 
 using namespace std;
+
+
+int cSentence::myLastID = 0;
 
 cFileText::cFileText()
 {
@@ -88,6 +92,58 @@ cFileText::cFileText( const std::string& filename )
         cout << "Exception!\n";
     }
 }
+
+void cFileText::AddSentence( const std::string& text )
+{
+    LastPara().push_back( cSentence( text ) );
+}
+void cFileText::AddPara()
+{
+    LastSection().push_back( cPara() );
+}
+void cFileText::AddSection()
+{
+    LastText().push_back( cSection() );
+}
+void cFileText::AddText()
+{
+    // create para with no sentence
+    cPara p;
+
+    // create section with one paragraph
+    cSection s;
+    s.push_back( p );
+
+    // create a text with one section
+    cText t;
+    t.push_back( s );
+
+    myText.push_back( t );
+
+    cSentence::ResetID();
+}
+
+
+cOutput cFileText::Output( int text )
+{
+    string so;
+    auto& t = myText[ text ];
+    for( auto& s : t )
+    {
+        for( auto & p : s )
+        {
+            for( auto& sent : p  )
+            {
+                so += sent.TextID();
+            }
+        }
+    }
+    cOutput o;
+    o.Parse( so );
+    return o;
+}
+
+
 
 void cFileText::setSwapAllParas( eSwapOption swap )
 {
