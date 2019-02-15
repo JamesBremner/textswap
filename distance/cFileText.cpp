@@ -3,7 +3,17 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/moment.hpp>
+
 #include "json.hpp"
+
+#include "cOutput.h"
 #include "cFileText.h"
 
 using namespace std;
@@ -24,6 +34,8 @@ cFileText::cFileText( const std::string& filename )
     }
     json j;
     i >> j;
+
+    try {
 
     AddText();
 
@@ -47,7 +59,7 @@ cFileText::cFileText( const std::string& filename )
                     s.erase(p,3);
                 p = s.find("...");
                 if( p != -1 )
-                    s.erase(p,3);
+                    s.erase(p,2);
 
                 p = 0;
                 while( 1 )
@@ -72,8 +84,10 @@ cFileText::cFileText( const std::string& filename )
         }
         AddText();
     }
-
-    cout << Text();
+    }
+    catch( ... ) {
+        cout << "Exception!\n";
+    }
 }
 
 void cFileText::setSwapAllParas( eSwapOption swap )
@@ -143,17 +157,45 @@ string cFileText::Text()
             int para_count = 1;
             for( auto& p : s )
             {
-                if( p.size() ) {
-                ss << "\nPara " << para_count++ << "\n";
-                for( auto& sent : p )
+                if( p.size() )
                 {
-                    ss << "   " << sent.TextID()
-                       << ": " << sent.TextText()
-                       << "\n";
-                }
+                    ss << "\nPara " << para_count++ << "\n";
+                    for( auto& sent : p )
+                    {
+                        ss << "   " << sent.TextID()
+                           << ": " << sent.TextText()
+                           << "\n";
+                    }
                 }
             }
         }
     }
     return ss.str();
+}
+void cFileText::Difference()
+{
+    struct sWeight W;
+    W.move = 1;
+    W.presence = 1;
+
+    using namespace boost::accumulators;
+    accumulator_set<float, stats<
+    tag::mean, tag::min, tag::max, tag::sum > > acc;
+
+    for( int t1 = 0; t1< myText.size() - 1; t1++ )
+        for( int t2 = t1+1; t2< myText.size(); t2++ )
+        {
+            //cout << "Text " << t1+1 << " V " << t2+1 << "\n";
+            cOutput o1 = Output( t1 );
+            cOutput o2 = Output( t2 );
+            float ds = Distance3( o1, o2, W );
+
+            // accumulate statistics
+            acc( ds );
+        }
+
+        cout << "\nMin Distance:   " << boost::accumulators::min( acc ) << std::endl;
+        cout << "Mean Distance:   " << boost::accumulators::mean( acc ) << std::endl;
+        cout << "Max Distance:   " << boost::accumulators::max( acc ) << std::endl;
+        cout << "Total Distance:   " << boost::accumulators::sum( acc ) << std::endl;
 }

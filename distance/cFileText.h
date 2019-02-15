@@ -160,6 +160,8 @@ public:
 
     void setSwapAllParas( eSwapOption swap );
 
+    void Difference();
+
 
 private:
     cText& LastText()

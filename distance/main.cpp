@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <algorithm>
 
@@ -19,14 +20,6 @@
 int cSentence::myLastID = 0;
 
 using namespace std;
-
-
-
-struct sWeight
-{
-    float move;
-    float presence;
-};
 
 
 void cFileText::AddSentence( const std::string& text )
@@ -133,9 +126,11 @@ void cOutput::Match(
         {
             cNGram test_sequence( *this, k, len );
 
+            //cout << "Trying: " << test_sequence.Text() << "\n";
+
             if( o2.Match( test_sequence ) != -1 )
             {
-                cout << "Found sequence " << test_sequence.Text() << "\n";
+                //cout << "Found sequence " << test_sequence.Text() << "\n";
 
                 ret.push_back( test_sequence );
 
@@ -156,18 +151,28 @@ void cOutput::Match(
     Convert( ret );
     o2.Convert( ret );
 
+//    cout << Text() << " V " << o2.Text() << "\n";
+
     return;
 }
 
 int cOutput::Match( cNGram& seq )
 {
+    // find location in this output of fist sentence in test sequence
     int it = find( seq[0] );
+
+    // check fist sentence in test sequence is present
     if( it == -1 )
+        return -1;
+
+    // check that, at least, this output is long enough to possibly include entire test sequence
+    if( size() - it < seq.size() )
         return -1;
 
     for( int k = 1; k < seq.size(); k++ )
     {
-        if( seq[k] != myElement[ it+k ] )
+        //cout << "comparing " << seq.myElem[k].TextID()[0] << " V " << myElement[ it+k ].TextID()[0] << "\n";
+        if( seq.myElem[k] != myElement[ it+k ] )
         {
             return -1;
         }
@@ -181,15 +186,13 @@ float Distance3(    cOutput& o1,
                     const sWeight& W
                )
 {
-    cout << "\n Distance calculation " << o1.TextElements() << " V " << o2.TextElements() << "\n";
+    //cout << "\n Distance calculation " << o1.TextElements() << " V " << o2.TextElements() << "\n";
 
     int total_move_count = 0;
     int presence_count    = 0;
 
     // Find matching ngrams of length 2 or greater in two outputs
     o1.Match( o2 );
-
-
 
     // loop over ngrams in output 1
     for( auto& g : o1.myGram )
@@ -203,12 +206,12 @@ float Distance3(    cOutput& o1,
             // ngram is present in both outputs, possibly moved
 
             int m = abs( i1 - i2 );
-            cout << g.Text() << " moved " << m << "\n";
+            //cout << g.Text() << " moved " << m << "\n";
             total_move_count += m;
         }
         else
         {
-            cout << g.Text() << " present in 1st output only\n";
+           // cout << g.Text() << " present in 1st output only\n";
             presence_count++;
         }
     }
@@ -219,16 +222,16 @@ float Distance3(    cOutput& o1,
         if( o1.Where( g ) == -1 )
         {
             presence_count++;
-            cout << g.Text() << " present in 2nd output only\n";
+            //cout << g.Text() << " present in 2nd output only\n";
         }
     }
 
     float t = total_move_count * W.move + presence_count * W.presence;
-    cout << "Distance score " << t << "\n";
+    //cout << "Distance score " << t << "\n";
     return t;
 }
 
-void cOutput::Convert( vector< cNGram >& vg )
+void cOutput::Convert( std::vector< cNGram >& vg )
 {
     // loop over matching ngrams
     for( auto& g : vg  )
@@ -249,9 +252,6 @@ void cOutput::Convert( vector< cNGram >& vg )
     myGram.erase(
         unique( myGram.begin(), myGram.end() ),
         myGram.end() );
-
-    // display results
-    cout << Text() << "\n";
 }
 
 int cOutput::Where( cNGram& target )
@@ -276,6 +276,9 @@ int main()
     if( filename.length() > 1 )
     {
         cFileText theFile( filename );
+        ofstream of("a.log");
+        of << theFile.Text();
+        theFile.Difference();
         return 0;
     }
 
