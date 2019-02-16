@@ -31,7 +31,7 @@ public:
         myID = std::string( { cid } );
     }
     /** Get text structure ID */
-    std::string  TextID()
+    std::string  TextID() const
     {
         return myID;
     }

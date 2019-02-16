@@ -1,4 +1,5 @@
 #include <string>
+#include <iostream>
 #include <sstream>
 #include <vector>
 #include <random>       // std::default_random_engine
@@ -22,24 +23,24 @@ cNGram::cNGram( cOutput& o, int pos, int len )
     for( int k = pos; k < pos+len; k++ )
         myElem.push_back( o.myElement[k] );
 }
-    std::string cNGram::Text()
-    {
-        std::stringstream ss;
-        ss << "'";
-        for( auto c : myElem )
-            ss << c.TextID();
-        ss << "'";
-        return ss.str();
-    }
-    bool cNGram::operator==(const cNGram& rhs) const
-    {
-        if( size() != rhs.size() )
+
+std::ostream& operator <<(std::ostream& os, const cNGram& g)
+{
+    os << "'";
+    for( auto& c : g.myElem )
+        os << c.TextID();
+    os << "'";
+    return os;
+}
+bool cNGram::operator==(const cNGram& rhs) const
+{
+    if( size() != rhs.size() )
+        return false;
+    for( int k = 0; k < size(); k++ )
+        if( myElem[k] != rhs.myElem[k] )
             return false;
-        for( int k = 0; k < size(); k++ )
-            if( myElem[k] != rhs.myElem[k] )
-                return false;
-        return true;
-    }
+    return true;
+}
 
 
 void cOutput::Parse( const string& s )
@@ -52,14 +53,13 @@ void cOutput::Parse( const string& s )
         myGram.push_back( cNGram( c ) );
     }
 }
-string cOutput::Text()
+std::ostream& operator <<(std::ostream& os, const cOutput& o )
 {
-    stringstream ss;
-    for( auto& g : myGram )
+    for( auto& g : o.myGram )
     {
-        ss << g.Text() << " ";
+        os << g << " ";
     }
-    return ss.str();
+    return os;
 }
 
 string cOutput::TextElements()
@@ -186,7 +186,7 @@ int cOutput::Where( cNGram& target )
 }
 
 
-    /** Calculate distance between two outputs */
+/** Calculate distance between two outputs */
 float Distance3(    cOutput& o1,
                     cOutput& o2,
                     const sWeight& W
@@ -212,12 +212,12 @@ float Distance3(    cOutput& o1,
             // ngram is present in both outputs, possibly moved
 
             int m = abs( i1 - i2 );
-            //cout << g.Text() << " moved " << m << "\n";
+            cout << g << " moved " << m << "\n";
             total_move_count += m;
         }
         else
         {
-           // cout << g.Text() << " present in 1st output only\n";
+             cout << g << " present in 1st output only\n";
             presence_count++;
         }
     }
@@ -228,11 +228,11 @@ float Distance3(    cOutput& o1,
         if( o1.Where( g ) == -1 )
         {
             presence_count++;
-            //cout << g.Text() << " present in 2nd output only\n";
+            cout << g << " present in 2nd output only\n";
         }
     }
 
     float t = total_move_count * W.move + presence_count * W.presence;
-    //cout << "Distance score " << t << "\n";
+    cout << "Distance score " << t << "\n";
     return t;
 }

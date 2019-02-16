@@ -17,8 +17,6 @@ public:
     {
         return (int) myElem.size();
     }
-    std::string Text();
-
     std::vector<cSentence>::iterator begin()
     {
         return myElem.begin();
@@ -33,6 +31,9 @@ public:
     {
         return myElem[x];
     }
+    friend std::ostream& operator <<(std::ostream& os, const cNGram& g );
+
+
 private:
     std::vector< cSentence > myElem;
 };
@@ -61,8 +62,6 @@ public:
     /** find location of element */
     int find( cSentence& c );
 
-    /** Display text of converted output */
-    std::string Text();
     std::string TextElements();
 
     /** Find matching ngrams */
@@ -77,6 +76,7 @@ public:
     /** Convert from elements to matching ngrams of elements */
     void Convert( std::vector< cNGram >& vg );
 
+    friend std::ostream& operator <<(std::ostream& os, const cOutput& g );
 };
 
 /// The weight assigned to particular differences between texts.
